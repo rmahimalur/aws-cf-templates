@@ -1,0 +1,231 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description:  This template Creates the security groups required by our entire stack.
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: SecurityGroup Configuration
+        Parameters:
+          - VPCCIDR
+          - SecurityGroupName
+          - ProjectName
+          - IpProtocol
+      - Label:
+          default: Inbound Rule Condition
+        Parameters:
+          - CreateSecurityGroupinboundRule1
+          - CreateSecurityGroupinboundRule2
+          - CreateSecurityGroupinboundRule3
+          - CreateSecurityGroupinboundRule4
+
+      - Label:
+          default: Inbound Rule From, To and Source CIDR/ID Configuration
+        Parameters:
+          - InboundRule1FromPort
+          - InboundRule1ToPort
+          - InboundRule1CidrIp
+          - InboundRule2FromPort
+          - InboundRule2ToPort
+          - InboundRule2CidrIp
+          - InboundRule3FromPort
+          - InboundRule3ToPort
+          - InboundRule3CidrIp
+          - InboundRule4FromPort
+          - InboundRule4ToPort
+          - InboundRule4CidrIp
+
+    ParameterLabels:
+      VPCCIDR:
+        default: VPC CIDR
+      SecurityGroupName:
+        default: Security Group Name
+      ProjectName:
+        default: Name of the Project
+      IpProtocol:
+        default: Ip Protocol. Defaults to tcp.
+      CreateSecurityGroupinboundRule1:
+        default: Create SecurityGroup inbound Rule1
+      CreateSecurityGroupinboundRule2:
+        default: Create SecurityGroup inbound Rule2
+      CreateSecurityGroupinboundRule3:
+        default: Create SecurityGroup inbound Rule3
+      CreateSecurityGroupinboundRule4:
+        default: Create SecurityGroup inbound Rule4
+      InboundRule1FromPort:
+        default: Inbound Rule1 From Port
+      InboundRule1ToPort:
+        default: Inbound Rule1 To Port
+      InboundRule1CidrIp:
+        default: Inbound Rule1 CidrIp
+      InboundRule2FromPort:
+        default: Inbound Rule2 From Port
+      InboundRule2ToPort:
+        default: Inbound Rule2 To Port
+      InboundRule2CidrIp:
+        default: Inbound Rule2 CidrIp
+      InboundRule3FromPort:
+        default: Inbound Rule3 From Port
+      InboundRule3ToPort:
+        default: Inbound Rule3 To Port
+      InboundRule3CidrIp:
+        default: Inbound Rule3 CidrIp
+      InboundRule4FromPort:
+        default: Inbound Rule4 From Port
+      InboundRule4ToPort:
+        default: Inbound Rule4 To Port
+      InboundRule4CidrIp:
+        default: Inbound Rule4 CidrIp
+
+Parameters:
+  VPCCIDR:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that allows instances access to the Internet.
+  SecurityGroupName:
+    Type: String
+    Description: Name of the security Group
+    Default: EcsALBSecurityGroup
+  ProjectName:
+    Type: String
+    Description: Name of the project this SecurityGroup belongs to.
+    Default: ESS
+  IpProtocol:
+    Type: String
+    Description: Enter the protocol to use
+    Default: tcp
+  CreateSecurityGroupinboundRule1:
+    Type: String
+    Description: Create EC2 SecurityGroup inbound Rule1.
+    Default: true
+  CreateSecurityGroupinboundRule2:
+    Type: String
+    Description: Create EC2 SecurityGroup inbound Rule2
+    Default: true
+  CreateSecurityGroupinboundRule3:
+    Type: String
+    Description: Create EC2 SecurityGroup inbound Rule3.
+    Default: true
+  CreateSecurityGroupinboundRule4:
+    Type: String
+    Description: Create EC2 SecurityGroup inbound Rule4.
+    Default: true
+  InboundRule1FromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 22
+  InboundRule1ToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 22
+  InboundRule1CidrIp:
+    Type: String
+    Description: You must specify a source security group (SourceSecurityGroupName or SourceSecurityGroupId) or a CIDR range (CidrIp or CidrIpv6).
+    Default: 0.0.0.0/0
+  InboundRule2FromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  InboundRule2ToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  InboundRule2CidrIp:
+    Type: String
+    Description: You must specify a source security group (SourceSecurityGroupName or SourceSecurityGroupId) or a CIDR range (CidrIp or CidrIpv6).
+    Default: 0.0.0.0/0
+  InboundRule3FromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 443
+  InboundRule3ToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 443
+  InboundRule3CidrIp:
+    Type: String
+    Description: You must specify a source security group (SourceSecurityGroupName or SourceSecurityGroupId) or a CIDR range (CidrIp or CidrIpv6).
+    Default: 0.0.0.0/0
+  InboundRule4FromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 8080
+  InboundRule4ToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 8080
+  InboundRule4CidrIp:
+    Type: String
+    Description: You must specify a source security group (SourceSecurityGroupName or SourceSecurityGroupId) or a CIDR range (CidrIp or CidrIpv6).
+    Default: 0.0.0.0/0
+
+Conditions:
+  CreateSecurityGroupinboundRule1:
+    'Fn::Equals':
+      - Ref: CreateSecurityGroupinboundRule1
+      - true
+  CreateSecurityGroupinboundRule2:
+    'Fn::Equals':
+      - Ref: CreateSecurityGroupinboundRule2
+      - true
+  CreateSecurityGroupinboundRule3:
+    'Fn::Equals':
+      - Ref: CreateSecurityGroupinboundRule3
+      - true
+  CreateSecurityGroupinboundRule4:
+    'Fn::Equals':
+      - Ref: CreateSecurityGroupinboundRule4
+      - true
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for EC2 instances and ALBs.
+      VpcId: !Ref 'VPCCIDR'
+      Tags:
+        - Key: Description
+          Value: Secutiry Group for EC2 instances
+        - Key: Name
+          Value: !Ref SecurityGroupName
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  SecurityGroupinboundRule1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroupinboundRule1
+    Properties:
+      GroupId: !Ref 'SecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref InboundRule1FromPort
+      ToPort: !Ref InboundRule1ToPort
+      CidrIp: !Ref InboundRule1CidrIp
+  SecurityGroupinboundRule2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroupinboundRule2
+    Properties:
+      GroupId: !Ref 'SecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref InboundRule2FromPort
+      ToPort: !Ref InboundRule2ToPort
+      CidrIp: !Ref InboundRule2CidrIp
+  SecurityGroupinboundRule3:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroupinboundRule3
+    Properties:
+      GroupId: !Ref 'SecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref InboundRule3FromPort
+      ToPort: !Ref InboundRule3ToPort
+      CidrIp: !Ref InboundRule3CidrIp
+  SecurityGroupinboundRule4:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateSecurityGroupinboundRule4
+    Properties:
+      GroupId: !Ref 'SecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref InboundRule4FromPort
+      ToPort: !Ref InboundRule4ToPort
+      CidrIp: !Ref InboundRule4CidrIp
+
+Outputs:
+  SecurityGroup:
+    Value: !Ref SecurityGroup
+    Description: Security Group

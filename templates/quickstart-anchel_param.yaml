@@ -42,6 +42,37 @@ Metadata:
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
+
+FrontEndLC
+      InstanceMonitoring:
+        default:
+      InstanceType:
+        default:
+      ClusterName:
+        default:
+
+FrontEndASG
+      Cooldown:
+        default:
+      DesiredCapacity:
+        default:
+      MinSize:
+        default:
+      MaxSize:
+        default:
+      HealthCheckGracePeriod:
+        default:
+      HealthCheckType:
+        default:
+      ClusterName:
+        default:
+      AppSubnetId:
+        default:
+
+FrontEndEC2SecurityGroup & FrontEndALBSecurityGroup
+      ProjectName:
+        default:
+
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -116,6 +147,13 @@ Parameters:
       https://anchel-quickstart.s3.amazonaws.com/quickstart-anchel/scripts/banner_message.txt
     Description: Banner text to display upon login
     Type: String
+  BastionTenancy:
+    Description: 'VPC Tenancy to launch the bastion in. Options: ''dedicated'' or ''default'''
+    Type: String
+    Default: default
+    AllowedValues:
+      - dedicated
+      - default
   BastionInstanceType:
     Description: Amazon EC2 instance type for the bastion instances
     Type: String
@@ -133,23 +171,29 @@ Parameters:
       - m4.xlarge
       - m4.2xlarge
       - m4.4xlarge
-  Ec2InstanceType:
-    Description: Amazon EC2 instance type for the bastion instances
-    Type: String
-    Default: t2.micro
+  EnableBanner:
     AllowedValues:
-      - t2.nano
-      - t2.micro
-      - t2.small
-      - t2.medium
-      - t2.large
-      - m3.large
-      - m3.xlarge
-      - m3.2xlarge
-      - m4.large
-      - m4.xlarge
-      - m4.2xlarge
-      - m4.4xlarge
+      - 'true'
+      - 'false'
+    Default: 'true'
+    Description: >-
+      To include a banner to be displayed when connecting via SSH to the
+      bastion, set this parameter to true
+    Type: String
+  EnableTCPForwarding:
+    Type: String
+    Description: Enable/Disable TCP Forwarding
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+  EnableX11Forwarding:
+    Type: String
+    Description: Enable/Disable X11 Forwarding
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
   KeyPairName:
     Description: >-
       Public/private key pairs allow you to securely connect to your instance
@@ -163,6 +207,55 @@ Parameters:
       - '4'
     Default: '1'
     Description: Enter the number of bastion hosts to create
+    Type: String
+  PublicSubnet1CIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.1.0/26
+    Description: CIDR Block for the public DMZ subnet 1 located in Availability Zone 1
+    Type: String
+  PublicSubnet2CIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.2.0/26
+    Description: CIDR Block for the public DMZ subnet 2 located in Availability Zone 2
+    Type: String
+  PrivateSubnet1ACIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.12.0/26
+    Description: CIDR block for private subnet 1A located in Availability Zone 1
+    Type: String
+  PrivateSubnet1BCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.13.0/26
+    Description: CIDR block for private subnet 1B located in Availability Zone 2
+    Type: String
+  PrivateSubnet2ACIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.21.0/26
+    Description: CIDR block for private subnet 2A located in Availability Zone 1
+    Type: String
+  PrivateSubnet2BCIDR:
+    AllowedPattern: >-
+      ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.22.0/26
+    Description: CIDR block for private subnet 2B located in Availability Zone 2
+    Type: String
+  VPCTenancy:
+    AllowedValues:
+      - default
+      - dedicated
+    Default: default
+    Description: The allowed tenancy of instances launched into the VPC
     Type: String
   QSS3BucketName:
     AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
@@ -413,7 +506,7 @@ Resources:
       Parameters:
           ec2iaminstanceprofile:       !Ref EC2IAMInstanceProfile
           AMIImageId:                  !Ref AMIImageId
-          InstanceMonitoring:          true
+          InstanceMonitoring:          !Ref InstanceMonitoring
           InstanceType:                !Ref Ec2InstanceType
           ClusterName:                 !Ref FrontEndClusterName
           SecurityGroup:               !GetAtt FrontEndEC2SecurityGroup.Outputs.SecurityGroup
@@ -424,12 +517,12 @@ Resources:
         'Fn::Sub':
           - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/templates/services/autoscaling-group.yaml
       Parameters:
-          Cooldown:                      30
-          DesiredCapacity:               2
-          MinSize:                       2
-          MaxSize:                       3
-          HealthCheckGracePeriod:        50
-          HealthCheckType:               EC2
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
           ClusterName:                   !Ref FrontEndClusterName
           LaunchConfigurationName:       !GetAtt FrontEndLC.Outputs.LaunchConfiguration
           Subnets:
@@ -445,7 +538,7 @@ Resources:
           - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/templates/services/scaling-policies.yaml
       Parameters:
           AutoScalingGroupName:          !GetAtt FrontEndASG.Outputs.AutoScalingGroup
-          Cooldown:                      30
+          Cooldown:                      !Ref Cooldown
           ScalingUpAdjustment:           '1'
           ScalingDownAdjustment:         '-1'
 
@@ -468,7 +561,7 @@ Resources:
         CreateSecurityGroupinboundRule4:   false
         InboundRule1FromPort:              80
         InboundRule1FromPort:              80
-        InboundRule1CidrIp:                '0.0.0.0/0'
+        InboundRule1CidrIp:                '0.0.0.0/0'***********
         InboundRule2FromPort:              ''
         InboundRule2FromPort:              ''
         InboundRule2CidrIp:                ''
@@ -520,7 +613,7 @@ Resources:
             - ${StackName}-FrontEndALB
             - StackName: !Ref AWS::StackName
           CreateApplicationLoadBalancer:   true
-          LoadBalancerName:                !Ref FrontEndALBName
+          LoadBalancerName:                Dev_FrontEnd_ALB
           LoadBalancerType:                application
           Scheme:                          internal
           LoadBalancerSecurityGroup:       !Ref FrontEndALBSecurityGroup
@@ -578,12 +671,12 @@ Resources:
         'Fn::Sub':
           - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/templates/services/autoscaling-group.yaml
       Parameters:
-          Cooldown:                      30
-          DesiredCapacity:               2
-          MinSize:                       2
-          MaxSize:                       3
-          HealthCheckGracePeriod:        50
-          HealthCheckType:               EC2
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
           ClusterName:                   !Ref BackEndClusterName
           LaunchConfigurationName:       !GetAtt BackEndLC.Outputs.LaunchConfiguration
           Subnets:
@@ -622,7 +715,7 @@ Resources:
         CreateSecurityGroupinboundRule4:   false
         InboundRule1FromPort:              80
         InboundRule1FromPort:              80
-        InboundRule1CidrIp:                '0.0.0.0/0'
+        InboundRule1CidrIp:                '0.0.0.0/0'***********
         InboundRule2FromPort:              ''
         InboundRule2FromPort:              ''
         InboundRule2CidrIp:                ''
@@ -652,7 +745,7 @@ Resources:
         CreateSecurityGroupinboundRule4:   false
         InboundRule1FromPort:              8080
         InboundRule1FromPort:              8080
-        InboundRule1CidrIp:                '0.0.0.0/0'
+        InboundRule1CidrIp:                '0.0.0.0/0'*********
         InboundRule2FromPort:              ''
         InboundRule2FromPort:              ''
         InboundRule2CidrIp:                ''

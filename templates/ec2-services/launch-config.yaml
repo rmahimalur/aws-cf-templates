@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating AutoScaling launch Config
+Parameters:
+  AMIImageId:
+    Type: String
+    Description: Enter AMI Image Id
+  ClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: m3.large
+    AllowedValues:
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m4.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  InstanceMonitoring:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: True
+  SecurityGroup:
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Description: Select Security Groups
+  S3IamInstanceProfile:
+    Type: String
+    Default: ADO1_EC2_Role
+    Description: IAM instance profile for S3 downloads. Use ADO1_EC2_Role
+
+Resources:
+  ESSLaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Properties:
+      AssociatePublicIpAddress:    'false'
+      EbsOptimized:                'false'
+      IamInstanceProfile:          !Ref S3IamInstanceProfile
+      ImageId:                     !Ref AMIImageId
+      InstanceMonitoring:          !Ref InstanceMonitoring
+      InstanceType:                !Ref InstanceType
+      SecurityGroups:              !Ref SecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+           #!/bin/bash
+           /root/.deploy.sh
+
+           # creating the local sudoers file for adoadmin
+           echo "adoadmin ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+           echo "le9266@QNET.QUALNET.ORG ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+           # create .ssh directory
+           mkhomedir_helper adoadmin
+           restorecon -R -v /home
+           restorecon -R -v /home/adoadmin
+           mkdir /home/adoadmin/.ssh
+
+
+           # copy the public from s3 to adoadmin
+           /bin/aws s3 cp s3://ventera-ess/ssh-keys/bastion-ssh-keys/id_rsa.pub /home/adoadmin/.ssh/authorized_keys
+
+           # change the permissions of .ssh dir and files
+           chown -R adoadmin:adoadmin /home/adoadmin
+           chmod 700 /home/adoadmin; chmod 700 /home/adoadmin/.ssh; chmod 600 /home/adoadmin/.ssh/*
+
+           # Install Docker repo and docker-ce
+           yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+           yum clean all
+           yum repolist
+           rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/p/pigz-2.3.4-1.el7.x86_64.rpm
+           yum install -y docker-ce
+           service docker start
+           chkconfig docker on
+
+           # Set iptables rules
+           echo 'net.ipv4.conf.all.route_localnet = 1' >> /etc/sysctl.conf
+           sysctl -p /etc/sysctl.conf
+           iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
+           iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
+
+           # Write iptables rules to persist after reboot
+           iptables-save > /etc/sysconfig/iptables
+
+           # Create directories for ECS agent
+           mkdir -p /var/log/ecs /var/lib/ecs/data /etc/ecs
+
+           # Write ECS config file
+           cat << EOF > /etc/ecs/ecs.config
+           ECS_CLUSTER=${ClusterName}
+           ECS_DATADIR=/data
+           ECS_ENABLE_TASK_IAM_ROLE=true
+           ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true
+           ECS_LOGFILE=/log/ecs-agent.log
+           ECS_AVAILABLE_LOGGING_DRIVERS=["json-file","awslogs"]
+           ECS_LOGLEVEL=info
+           EOF
+
+           # Write systemd unit file
+           cat << EOF > /etc/systemd/system/docker-container@ecs-agent.service
+           [Unit]
+           Description=Docker Container %I
+           Requires=docker.service
+           After=docker.service
+
+           [Service]
+           Restart=always
+           ExecStart=/usr/bin/docker run --name %i \
+           --privileged \
+           --restart=on-failure:10 \
+           --volume=/var/run:/var/run \
+           --volume=/var/log/ecs/:/log:Z \
+           --volume=/var/lib/ecs/data:/data:Z \
+           --volume=/etc/ecs:/etc/ecs \
+           --net=host \
+           --env-file=/etc/ecs/ecs.config \
+           amazon/amazon-ecs-agent:latest
+           ExecStop=/usr/bin/docker rm -f %i
+
+           [Install]
+           WantedBy=default.target
+           EOF
+
+           # Copy nexus credentials from s3 and append them to ecs.config
+           /bin/aws s3 cp s3://ventera-ess/nexus-credentials/nexus-credentials.txt /tmp/nexus-credentials.txt
+           cat /tmp/nexus-credentials.txt | tee -a /etc/ecs/ecs.config
+
+           # Configure docker insecure registry
+           /bin/aws s3 cp s3://ventera-ess/docker-config/daemon.json /etc/docker/daemon.json
+
+           # Restart Docker service
+           service docker restart
+
+           systemctl enable docker-container@ecs-agent.service
+           systemctl start docker-container@ecs-agent.service
+
+Outputs:
+  ESSLaunchConfiguration:
+    Value: !Ref ESSLaunchConfiguration
+    Description: ESS Launch Configuration

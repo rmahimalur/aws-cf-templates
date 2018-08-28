@@ -1,0 +1,619 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating ECS Cluster
+Parameters:
+  AMIImageId:
+    Type: String
+    Description: Enter AMI Image Id
+    Default: ami-52a9752d
+  NginxClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXNGinxCluster
+  oAuthClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXoAuthCluster
+  WSO2APIClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXWSO2APICluster
+  AdminServicesClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXAdminServicesCluster
+  ContentServicesClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXContentServicesCluster
+  WSO2EIClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: SBXWSO2EICluster
+  InstanceType:
+    Description: Instance type
+    Type: String
+    Default: m3.large
+    AllowedValues:
+      - m3.medium
+      - m3.large
+      - m3.xlarge
+      - m4.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  VPC:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: Enter VPC Id
+    Default: vpc-d90edba0
+  WebSubnetId:
+    Description: List of subnets for the ECS Instances
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Default: subnet-535e8a09,subnet-adb987c8,subnet-ded50bf2,subnet-ded50bf2
+  AppSubnetId:
+    Description: List of subnets for the ECS Instances
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Default: subnet-cc5b8f96,subnet-acb987c9,subnet-51d00e7d,subnet-6e49c326
+  DataSubnetId:
+    Description: List of subnets for the ECS Instances
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Default: subnet-265a8e7c,subnet-e6b58b83,subnet-11d10f3d,subnet-654dc72d
+  WebSecurityGroup:
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Description: Select Security Groups
+    Default: sg-b42616ca
+  AppDataSecurityGroup:
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Description: Select Security Groups
+    Default: sg-2525155b
+  InstanceMonitoring:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: True
+  elbScheme:
+    Type: String
+    Default: internal
+    Description: Enter ELB Name
+  S3IamInstanceProfile:
+    Type: String
+    Default: ADO1_EC2_Role
+    Description: IAM instance profile for S3 downloads. Use ADO1_EC2_Role
+  EcsElasticLoadBalancerSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Default: 'subnet-cc5b8f96,subnet-acb987c9,subnet-51d00e7d,subnet-6e49c326'
+    Description: IAM instance profile for S3 downloads. Use ADO1_EC2_Role
+  EcsElasticLoadBalancerSGs:
+    Type: List<AWS::EC2::SecurityGroup::Id>
+    Default: sg-2525155b
+    Description: IAM instance profile for S3 downloads. Use ADO1_EC2_Role
+  TemplateSubFolder:
+    Type: String
+    Description: Enter the folder name of the CF scripts in S3.
+    Default: ventera-ess/cf-scripts
+  Cooldown:
+    Type: String
+    Default: 60
+    Description: Enter ELB Name
+  DesiredCapacity:
+    Type: String
+    Default: 2
+    Description: Enter ELB Name
+  MinSize:
+    Type: String
+    Default: 2
+    Description: Enter ELB Name
+  MaxSize:
+    Type: String
+    Default: 3
+    Description: Enter ELB Name
+  HealthCheckGracePeriod:
+    Type: String
+    Default: 50
+    Description: Enter ELB Name
+  HealthCheckType:
+    Type: String
+    Default: EC2
+    Description: Enter ELB Name
+  UpMaxSize:
+    Type: String
+    Description: The maximum number of instances to create for startup
+    Default: 2
+  UpMinSize:
+    Type: String
+    Description: The minimum number of instances to create for startup
+    Default: 2
+  UpDesiredSize:
+    Type: String
+    Description: The desired number of instances to keep for startup
+    Default: 2
+  DownMaxSize:
+    Type: String
+    Description: The maximum number of instances to create for shutdown
+    Default: 0
+  DownMinSize:
+    Type: String
+    Description: The minimum number of instances to create
+    Default: 0
+  DownDesiredSize:
+    Type: String
+    Description: The desired number of instances to keep
+    Default: 0
+  TaskUpRecurrence:
+    Type: String
+    Description: Schedule to when to start the servers
+    Default: "0 11 * * *"
+  TaskDownRecurrence:
+    Type: String
+    Description:  Schedule to when to stop the servers
+    Default: "1 00 * * *"
+
+Resources:
+  NginxLC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref NginxClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: WebSecurityGroup
+
+  NginxASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref NginxClusterName
+          LaunchConfigurationName:       !GetAtt NginxLC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: WebSubnetId
+
+  NginxScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt NginxASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  NginxScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt NginxASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence
+
+
+  oAuthLC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref oAuthClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: AppDataSecurityGroup
+
+  oAuthASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref oAuthClusterName
+          LaunchConfigurationName:       !GetAtt oAuthLC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  oAuthScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt oAuthASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  oAuthScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt oAuthASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence
+
+
+  WSO2APILC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref WSO2APIClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: AppDataSecurityGroup
+
+  WSO2APIASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref WSO2APIClusterName
+          LaunchConfigurationName:       !GetAtt WSO2APILC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  WSO2APIScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt WSO2APIASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  WSO2APIScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt WSO2APIASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence
+
+
+  AdminServicesLC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref AdminServicesClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: AppDataSecurityGroup
+
+  AdminServicesASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref AdminServicesClusterName
+          LaunchConfigurationName:       !GetAtt AdminServicesLC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  AdminServicesScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt AdminServicesASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  AdminServicesScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt AdminServicesASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence
+
+
+  ContentServicesLC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref ContentServicesClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: AppDataSecurityGroup
+
+  ContentServicesASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref ContentServicesClusterName
+          LaunchConfigurationName:       !GetAtt ContentServicesLC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  ContentServicesScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt ContentServicesASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  ContentServicesScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt ContentServicesASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence
+
+
+  WSO2EILC:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /launch-config.yaml
+      Parameters:
+          S3IamInstanceProfile:        !Ref S3IamInstanceProfile
+          AMIImageId:                  !Ref AMIImageId
+          InstanceMonitoring:          !Ref InstanceMonitoring
+          InstanceType:                !Ref InstanceType
+          ClusterName:                 !Ref WSO2EIClusterName
+          SecurityGroup:
+              'Fn::Join':
+                - ','
+                - Ref: AppDataSecurityGroup
+
+  WSO2EIASG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /autoscaling-group.yaml
+      Parameters:
+          Cooldown:                      !Ref Cooldown
+          DesiredCapacity:               !Ref DesiredCapacity
+          MinSize:                       !Ref MinSize
+          MaxSize:                       !Ref MaxSize
+          HealthCheckGracePeriod:        !Ref HealthCheckGracePeriod
+          HealthCheckType:               !Ref HealthCheckType
+          ClusterName:                   !Ref WSO2EIClusterName
+          LaunchConfigurationName:       !GetAtt WSO2EILC.Outputs.ESSLaunchConfiguration
+          Subnets:
+              'Fn::Join':
+                - ','
+                - Ref: DataSubnetId
+
+  WSO2EIScalingPolicy:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scaling-policies.yaml
+      Parameters:
+          AutoScalingGroupName:          !GetAtt WSO2EIASG.Outputs.ESSAutoScalingGroup
+          Cooldown:                      !Ref Cooldown
+          ScalingUpAdjustment:           '1'
+          ScalingDownAdjustment:         '-1'
+
+  WSO2EIScheduledAction:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /scheduled-action.yaml
+      Parameters:
+          AutoScalingGroupName:      !GetAtt WSO2EIASG.Outputs.ESSAutoScalingGroup
+          UpMaxSize:                 !Ref UpMaxSize
+          UpMinSize:                 !Ref UpMinSize
+          DownMaxSize:               !Ref DownMaxSize
+          DownMinSize:               !Ref DownMinSize
+          UpDesiredSize:             !Ref UpDesiredSize
+          DownDesiredSize:           !Ref DownDesiredSize
+          TaskUpRecurrence:          !Ref TaskUpRecurrence
+          TaskDownRecurrence:        !Ref TaskDownRecurrence

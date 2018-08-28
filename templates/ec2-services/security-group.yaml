@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that allows instances access to the Internet.
+    Default: vpc-d90edba0
+  Name:
+    Type: String
+    Description: Name of the security Group
+    Default: EcsALBSecurityGroup
+  ProjectName:
+    Type: String
+    Description: Name of the project this SecurityGroup belongs to.
+    Default: ESS
+  IpProtocol:
+    Type: String
+    Description: Enter the protocol to use
+    Default: tcp
+  EC2InboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  EC2InboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  EC2InboundCidrIp:
+    Type: String
+    Description: Enter the to port
+    Default: 0.0.0.0/0
+  DefaultEC2SecurityGroup:
+    Type: String
+    Description: Enter the default security group. For Test = sg-965ef1e7 , DEV = sg-a34b78dd, SBX = sg-2525155b, IMPL = sg-039b5570 , PROD = sg-1aa36b69
+    Default: sg-2525155b
+  ALBInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  ALBInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  ALBDockerInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 31000
+  ALBDockerInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 61000
+  WebALBHTTPInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  WebALBHTTPInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  WebALBHTTPInboundCidrIp:
+    Type: String
+    Description: Enter the from port
+    Default: 0.0.0.0/0
+  WebALBDockerFromPort:
+    Type: String
+    Description: Enter the to port
+    Default: 31000
+  WebALBDockerToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 61000
+  SecurityGroupType:
+    Type: String
+    Description: Name of the ALB security Group in the zone webalbsg or albsg.
+
+Conditions:
+  CreateEC2SecurityGroupIngress:
+    'Fn::Equals':
+      - Ref: SecurityGroupType
+      - ec2sg
+  CreateALBSecurityGroupIngress:
+    'Fn::Equals':
+      - Ref: SecurityGroupType
+      - albsg
+  CreateWebALBSecurityGroupIngress:
+    'Fn::Equals':
+      - Ref: SecurityGroupType
+      - webalbsg
+
+Resources:
+  ESSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for EC2 instances and ALBs.
+      VpcId: !Ref 'VpcId'
+      Tags:
+        - Key: Description
+          Value: Secutiry Group for EC2 instances
+        - Key: Name
+          Value: !Ref Name
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  EC2SecurityGroupinbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateEC2SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ESSSecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref EC2InboundFromPort
+      ToPort: !Ref EC2InboundToPort
+      CidrIp: !Ref EC2InboundCidrIp
+  WebALBSecurityGroupHTTPinboundSG:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateWebALBSecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ESSSecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref WebALBHTTPInboundFromPort
+      ToPort: !Ref WebALBHTTPInboundToPort
+      CidrIp: !Ref WebALBHTTPInboundCidrIp
+  WebALBSecurityGroupALBports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateWebALBSecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ESSSecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref WebALBDockerFromPort
+      ToPort: !Ref WebALBDockerToPort
+      SourceSecurityGroupId: !Ref 'ESSSecurityGroup'
+  ALBSecurityGroupinbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateALBSecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ESSSecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref ALBInboundFromPort
+      ToPort: !Ref ALBInboundToPort
+      SourceSecurityGroupId: !Ref 'DefaultEC2SecurityGroup'
+  ALBSecurityGroupDockerports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateALBSecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ESSSecurityGroup'
+      IpProtocol: !Ref IpProtocol
+      FromPort: !Ref ALBDockerInboundFromPort
+      ToPort: !Ref ALBDockerInboundToPort
+      SourceSecurityGroupId: !Ref 'ESSSecurityGroup'
+
+Outputs:
+  ESSSecurityGroup:
+    Value: !Ref ESSSecurityGroup
+    Description: ESS Security Group

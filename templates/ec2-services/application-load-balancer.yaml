@@ -1,0 +1,456 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  Environment:
+    Description: The environment name to prefix or tag
+    Type: String
+    Default: sbx
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that allows instances access to the Internet (default to SBX VPC).
+    Default: vpc-d90edba0
+  IpProtocol:
+    Type: String
+    Description: Enter the protocol to use
+    Default: tcp
+  NLBProtocol:
+    Type: String
+    Description: Enter the Listner protocol to use
+    Default: TCP
+  ALBProtocol:
+    Type: String
+    Description: Enter the Listner protocol to use
+    Default: HTTP
+  SubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two subnets in your selected VPC (default to SBX VPC).
+    Default: subnet-cc5b8f96,subnet-acb987c9,subnet-51d00e7d,subnet-6e49c326
+  Name:
+    Type: String
+    Description: Name of the security Group
+    Default: ESSLoadBalancer
+  Scheme:
+    Type: String
+    Description: Enter the scheme of the LoadBalancer (internal or internet-facing)
+    Default: internal
+  ProjectName:
+    Type: String
+    Description: Name of the project this SecurityGroup belongs to.
+    Default: ESS
+  TemplateSubFolder:
+    Type: String
+    Description: Enter the folder name of the CF scripts in S3.
+    Default: ventera-ess/cf-scripts
+  ALBInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  ALBInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  DefaultEC2SecurityGroup:
+    Type: String
+    Description: Enter the default security group. For Test = sg-965ef1e7 , DEV = sg-a34b78dd, SBX = sg-2525155b, IMPL = sg-039b5570 , PROD = sg-1aa36b69
+    Default: sg-2525155b
+  ALBDockerInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 31000
+  ALBDockerInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 61000
+  WebALBHTTPInboundFromPort:
+    Type: String
+    Description: Enter the from port
+    Default: 80
+  WebALBHTTPInboundToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 80
+  WebALBHTTPInboundCidrIp:
+    Type: String
+    Description: Enter the from port
+    Default: 0.0.0.0/0
+  WebALBDockerFromPort:
+    Type: String
+    Description: Enter the to port
+    Default: 31000
+  WebALBDockerToPort:
+    Type: String
+    Description: Enter the to port
+    Default: 61000
+  SecurityGroupType:
+    Type: String
+    Description: Name of the ALB security Group in the zone webalbsg or albsg.
+    Default: ''
+  SecurityGroup:
+      Description: Select the Security Group to apply to the Application Load Balancer
+      Type: List<AWS::EC2::SecurityGroup::Id>
+  LoadBalancerType:
+      Description: Sealect the LoadBalancer Type. Valid Properties "application" and "network".
+      Type: String
+      Default: application
+  CreateNetworkLoadBalancer:
+      Description: Select yes or no to create NetworkLoadBalancer.
+      Type: String
+      Default: ''
+  CreateApplicationLoadBalancer:
+      Description: Select yes or no to create ApplicationLoadBalancer.
+      Type: String
+      Default: ''
+  CreateALBTargetGroup1:
+      Description: Select yes or no for creating TargetGroup1.
+      Type: String
+      Default: ''
+  CreateALBTargetGroup2:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: ''
+  CreateALBTargetGroup3:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: ''
+  CreateALBListenerRule1:
+      Description: Select yes or no for creating ListenerRule1.
+      Type: String
+      Default: ''
+  CreateALBListenerRule2:
+      Description: Select yes or no for creating ListenerRule2.
+      Type: String
+      Default: ''
+  CreateALBListenerRule3:
+      Description: Select yes or no for creating ListenerRule3.
+      Type: String
+      Default: ''
+  CreateALBListenerRule1path:
+      Description: Create a ListenerRule path for the service eg:'/service*'.
+      Type: String
+      Default: ''
+  CreateALBListenerRule2path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+      Default: ''
+  CreateALBListenerRule3path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+      Default: ''
+  ALBTG1HealthCheckPath:
+    Type: String
+    Default: ''
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+  ALBTG2HealthCheckPath:
+    Type: String
+    Default: ''
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+  ALBTG3HealthCheckPath:
+    Type: String
+    Default: ''
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+  NLBTargetGroupName:
+    Type: String
+    Default: ''
+    Description: Name of the NLB TargetGroup.
+  ALBTargetGroupName1:
+    Type: String
+    Default: ''
+    Description: Name of the TargetGroup.
+  ALBTargetGroupName2:
+    Type: String
+    Default: ''
+    Description: Name of the TargetGroup.
+  ALBTargetGroupName3:
+    Type: String
+    Default: ''
+    Description: Name of the TargetGroup.
+  ALBTargetGroup1Port:
+    Type: String
+    Default: ''
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+  ALBTargetGroup2Port:
+    Type: String
+    Default: ''
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+  ALBTargetGroup3Port:
+    Type: String
+    Default: ''
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+  HealthCheckProtocol:
+    Type: String
+    Description: The protocol that the load balancer uses when performing health checks on the targets, such as HTTP or HTTPS.
+    Default: ''
+  HealthCheckPort:
+    Type: String
+    Default: ''
+    Description: The port that the load balancer uses when performing health checks on the targets. The default is "traffic-port", others is "override".
+  HealthyThresholdCount:
+    Type: String
+    Default: ''
+    Description: The number of consecutive successful health checks that are required before an unhealthy target is considered healthy.
+  UnhealthyThresholdCount:
+    Type: String
+    Default: ''
+    Description: The number of consecutive failed health checks that are required before a target is considered unhealthy. Default:3.
+  HealthCheckTimeoutSeconds:
+    Type: String
+    Default: ''
+    Description: The number of seconds to wait for a response before considering that a health check has failed. Default:60.
+  HealthCheckIntervalSeconds:
+    Type: String
+    Default: ''
+    Description: The approximate number of seconds between health checks for an individual target (5-300) seconds. Default:180.
+  Matcher:
+    Type: String
+    Default: ''
+    Description: The HTTP codes that a healthy target uses when responding to a health check. Default:200.
+  LoadBalancerName:
+    Type: String
+    Default: ''
+    Description: Enter the name for the LB.
+Conditions:
+  CreateNetworkLoadBalancer:
+    'Fn::Equals':
+      - Ref: CreateNetworkLoadBalancer
+      - yes
+  CreateApplicationLoadBalancer:
+    'Fn::Equals':
+      - Ref: CreateApplicationLoadBalancer
+      - yes
+  CreateALBListenerRule1:
+    'Fn::Equals':
+      - Ref: CreateALBListenerRule1
+      - yes
+  CreateALBListenerRule2:
+    'Fn::Equals':
+      - Ref: CreateALBListenerRule2
+      - yes
+  CreateALBListenerRule3:
+    'Fn::Equals':
+      - Ref: CreateALBListenerRule3
+      - yes
+  CreateALBTargetGroup1:
+    'Fn::Equals':
+      - Ref: CreateALBTargetGroup1
+      - yes
+  CreateALBTargetGroup2:
+    'Fn::Equals':
+      - Ref: CreateALBTargetGroup2
+      - yes
+  CreateALBTargetGroup3:
+    'Fn::Equals':
+      - Ref: CreateALBTargetGroup3
+      - yes
+Resources:
+  NetworkLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: CreateNetworkLoadBalancer
+    Properties:
+      Name: !Ref Name
+      Type: !Ref LoadBalancerType
+      Scheme: !Ref Scheme
+      Subnets: !Ref SubnetId
+      Tags:
+        - Key: Description
+          Value: LoadBalancer for ECS Cluster
+        - Key: Name
+          Value: !Ref Name
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+  NLBTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateNetworkLoadBalancer
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: !Ref HealthCheckProtocol
+      #HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Name: !Ref NLBTargetGroupName
+      Port: 80
+      Protocol: !Ref NLBProtocol
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref 'VpcId'
+  NLBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: CreateNetworkLoadBalancer
+    DependsOn: NLBTargetGroup
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'NLBTargetGroup'
+      LoadBalancerArn: !Ref 'NetworkLoadBalancer'
+      Port: '80'
+      Protocol: !Ref NLBProtocol
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Condition: CreateApplicationLoadBalancer
+    Properties:
+      Name: !Ref Name
+      Type: !Ref LoadBalancerType
+      Scheme: !Ref Scheme
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '30'
+      Subnets: !Ref SubnetId
+      SecurityGroups: !Ref SecurityGroup
+      Tags:
+        - Key: Description
+          Value: LoadBalancer for ECS Cluster
+        - Key: Name
+          Value: !Ref Name
+        - Key: ProjectName
+          Value: !Ref ProjectName
+  ALBTargetGroup1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateALBTargetGroup1
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      Name: !Ref ALBTargetGroupName1
+      Port: !Ref ALBTargetGroup1Port
+      Protocol: !Ref ALBProtocol
+      VpcId: !Ref 'VpcId'
+      HealthCheckProtocol: !Ref HealthCheckProtocol
+      HealthCheckPath: !Ref ALBTG1HealthCheckPath
+      HealthCheckPort: !Ref HealthCheckPort
+      HealthyThresholdCount: !Ref HealthyThresholdCount
+      UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+      HealthCheckTimeoutSeconds: !Ref HealthCheckTimeoutSeconds
+      HealthCheckIntervalSeconds: !Ref HealthCheckIntervalSeconds
+      Matcher:
+        HttpCode: !Ref Matcher
+  ALBTargetGroup2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateALBTargetGroup2
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      Name: !Ref ALBTargetGroupName2
+      Port: !Ref ALBTargetGroup2Port
+      Protocol: !Ref ALBProtocol
+      VpcId: !Ref 'VpcId'
+      HealthCheckProtocol: !Ref HealthCheckProtocol
+      HealthCheckPath: !Ref ALBTG2HealthCheckPath
+      HealthCheckPort: !Ref HealthCheckPort
+      HealthyThresholdCount: !Ref HealthyThresholdCount
+      UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+      HealthCheckTimeoutSeconds: !Ref HealthCheckTimeoutSeconds
+      HealthCheckIntervalSeconds: !Ref HealthCheckIntervalSeconds
+      Matcher:
+        HttpCode: !Ref Matcher
+  ALBTargetGroup3:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateALBTargetGroup3
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      Name: !Ref ALBTargetGroupName3
+      Port: !Ref ALBTargetGroup3Port
+      Protocol: !Ref ALBProtocol
+      VpcId: !Ref 'VpcId'
+      HealthCheckProtocol: !Ref HealthCheckProtocol
+      HealthCheckPath: !Ref ALBTG3HealthCheckPath
+      HealthCheckPort: !Ref HealthCheckPort
+      HealthyThresholdCount: !Ref HealthyThresholdCount
+      UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+      HealthCheckTimeoutSeconds: !Ref HealthCheckTimeoutSeconds
+      HealthCheckIntervalSeconds: !Ref HealthCheckIntervalSeconds
+      Matcher:
+        HttpCode: !Ref Matcher
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: CreateApplicationLoadBalancer
+    DependsOn: ALBTargetGroup1
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'ALBTargetGroup1'
+      LoadBalancerArn: !Ref 'ApplicationLoadBalancer'
+      Port: '80'
+      Protocol: !Ref ALBProtocol
+  ALBHttpListenerDefaultRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: CreateApplicationLoadBalancer
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref 'ALBTargetGroup1'
+      Conditions:
+        - Field: path-pattern
+          Values: [/]
+      ListenerArn: !Ref ALBListener
+      Priority: 1
+  ALBHttpListenerRule1:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: CreateALBListenerRule1
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup1
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref CreateALBListenerRule1path]
+      ListenerArn: !Ref ALBListener
+      Priority: 2
+  ALBHttpListenerRule2:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: CreateALBListenerRule2
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup2
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref CreateALBListenerRule2path]
+      ListenerArn: !Ref ALBListener
+      Priority: 3
+  ALBHttpListenerRule3:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: CreateALBListenerRule3
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup3
+      Conditions:
+        - Field: path-pattern
+          Values: [!Ref CreateALBListenerRule3path]
+      ListenerArn: !Ref ALBListener
+      Priority: 4
+  NLBDNSParameter:
+    Type: "AWS::SSM::Parameter"
+    Condition: CreateNetworkLoadBalancer
+    DependsOn: NetworkLoadBalancer
+    Properties:
+      Name:
+        Fn::Join:
+        - ''
+        - - '/'
+          - !Ref Environment
+          - '/'
+          - !Ref ProjectName
+          - '/'
+          - !Ref LoadBalancerName
+      Type: "String"
+      Value: !GetAtt NetworkLoadBalancer.DNSName
+      Description: "SSM Parameter for DNS name"
+  ALBDNSParameter:
+    Type: "AWS::SSM::Parameter"
+    Condition: CreateApplicationLoadBalancer
+    DependsOn: ApplicationLoadBalancer
+    Properties:
+      Name:
+        Fn::Join:
+        - ''
+        - - '/'
+          - !Ref Environment
+          - '/'
+          - !Ref ProjectName
+          - '/'
+          - !Ref LoadBalancerName
+      Type: "String"
+      Value: !GetAtt ApplicationLoadBalancer.DNSName
+      Description: "SSM Parameter for DNS name"

@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating Scheduled Actions for the AutoScalingGroup
+Parameters:
+  UpMaxSize:
+    Type: String
+    Description: The maximum number of instances to create for startup
+    Default: 1
+  UpMinSize:
+    Type: String
+    Description: The minimum number of instances to create for startup
+    Default: 1
+  UpDesiredSize:
+    Type: String
+    Description: The desired number of instances to keep for startup
+    Default: 1
+  DownMaxSize:
+    Type: String
+    Description: The maximum number of instances to create for shutdown
+    Default: 0
+  DownMinSize:
+    Type: String
+    Description: The minimum number of instances to create
+    Default: 0
+  DownDesiredSize:
+    Type: String
+    Description: The desired number of instances to keep
+    Default: 0
+  TaskUpRecurrence:
+    Type: String
+    Description: Schedule to when to start the servers
+    Default: "0 11 * * *"
+  TaskDownRecurrence:
+    Type: String
+    Description:  Schedule to when to stop the servers
+    Default: "1 00 * * *"
+  AutoScalingGroupName:
+    Description: The autoscaling group to attach this ScheduledAction policy
+    Type: String
+
+Resources:
+  ScheduledActionTaskUp:
+    Type: "AWS::AutoScaling::ScheduledAction"
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroupName
+      MaxSize:              !Ref UpMaxSize
+      MinSize:              !Ref UpMinSize
+      DesiredCapacity:      !Ref UpDesiredSize
+      Recurrence:           !Ref TaskUpRecurrence
+  ScheduledActionTaskDown:
+    Type: "AWS::AutoScaling::ScheduledAction"
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroupName
+      MaxSize:              !Ref DownMaxSize
+      MinSize:              !Ref DownMinSize
+      DesiredCapacity:      !Ref DownDesiredSize
+      Recurrence:           !Ref TaskDownRecurrence
