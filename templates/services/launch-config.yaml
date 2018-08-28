@@ -1,0 +1,261 @@
+Ec2InstanceTypeAWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating AutoScaling launch Config
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: Launc Config Configuration
+        Parameters:
+          - AMIImageId
+          - ClusterName
+          - Ec2InstanceType
+          - InstanceMonitoring
+          - SecurityGroup
+          - ec2iaminstanceprofile
+    ParameterLabels:
+      AMIImageId:
+        default: AMI ImageId
+      ClusterName:
+        default: ECS Cluster Name
+      InstanceType:
+        default: EC2 Instance Type
+      InstanceMonitoring:
+        default: Instance Monitoring
+      SecurityGroup:
+        default: SecurityGroup
+      ec2iaminstanceprofile:
+        default: S3 Iam Instance Profile
+Parameters:
+  AMIImageId:
+    AllowedValues:
+      - Amazon-Linux-HVM
+      - CentOS-7-HVM
+      - Ubuntu-Server-14.04-LTS-HVM
+      - Ubuntu-Server-16.04-LTS-HVM
+    Default: Amazon-Linux-HVM
+    Description: The Linux distribution for the AMI to be used for the bastion instances
+    Type: String
+  ClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+  Ec2InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+      - m3.large
+      - m3.xlarge
+      - m3.2xlarge
+      - m4.large
+      - m4.xlarge
+      - m4.2xlarge
+      - m4.4xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  InstanceMonitoring:
+    Description: The ECS Cluster Name
+    Type: String
+    Default: True
+  SecurityGroup:
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+    Description: Select Security Groups
+  ec2iaminstanceprofile:
+    Type: String
+    Description: IAM instance profile for S3 downloads.
+  OSImageOverride:
+    Description: Specify a region specific image to use for the instance
+    Type: String
+    Default: ''
+Mappings:
+  AWSAMIRegionMap:
+    AMI:
+      AMZNLINUXHVM: amzn-ami-hvm-2018.03.0.20180622-x86_64-gp2
+      CENTOS7HVM: >-
+        CentOS Linux 7 x86_64 HVM EBS ENA
+        1805_01-b7ee8a69-ee97-4a49-9e68-afaee216db2e-ami-77ec9308.4
+      US1404HVM: ubuntu/images/hvm-ssd/ubuntu-trusty-14.04-amd64-server-20180722
+      US1604HVM: ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20180727
+    ap-northeast-1:
+      AMZNLINUXHVM: ami-9c9443e3
+      CENTOS7HVM: ami-8e8847f1
+      US1404HVM: ami-8b542366
+      US1604HVM: ami-a9b8ce44
+    ap-northeast-2:
+      AMZNLINUXHVM: ami-ebc47185
+      CENTOS7HVM: ami-bf9c36d1
+      US1404HVM: ami-b25fe8dc
+      US1604HVM: ami-ba41f6d4
+    ap-south-1:
+      AMZNLINUXHVM: ami-5a8da735
+      CENTOS7HVM: ami-1780a878
+      US1404HVM: ami-16fdcf79
+      US1604HVM: ami-2b95a744
+    ap-southeast-1:
+      AMZNLINUXHVM: ami-ed838091
+      CENTOS7HVM: ami-8e0205f2
+      US1404HVM: ami-f4a5e31e
+      US1604HVM: ami-1c6627f6
+    ap-southeast-2:
+      AMZNLINUXHVM: ami-33f92051
+      CENTOS7HVM: ami-d8c21dba
+      US1404HVM: ami-50b11732
+      US1604HVM: ami-ee51f78c
+    ca-central-1:
+      AMZNLINUXHVM: ami-03e86a67
+      CENTOS7HVM: ami-e802818c
+      US1404HVM: ami-85be33e1
+      US1604HVM: ami-c8b13cac
+    eu-central-1:
+      AMZNLINUXHVM: ami-a058674b
+      CENTOS7HVM: ami-dd3c0f36
+      US1404HVM: ami-657e7c8e
+      US1604HVM: ami-da999b31
+    eu-west-1:
+      AMZNLINUXHVM: ami-e4515e0e
+      CENTOS7HVM: ami-3548444c
+      US1404HVM: ami-46d4ceac
+      US1604HVM: ami-cd49ac20
+    eu-west-2:
+      AMZNLINUXHVM: ami-b2b55cd5
+      CENTOS7HVM: ami-00846a67
+      US1404HVM: ami-a3d13bc4
+      US1604HVM: ami-b8956b53
+    eu-west-3:
+      AMZNLINUXHVM: ami-d50bbaa8
+      CENTOS7HVM: ami-262e9f5b
+      US1404HVM: ami-6f75c512
+      US1604HVM: ami-7379c90e
+    sa-east-1:
+      AMZNLINUXHVM: ami-83d58fef
+      CENTOS7HVM: ami-cb5803a7
+      US1404HVM: ami-36e8c95a
+      US1604HVM: ami-8adcfde6
+    us-east-1:
+      AMZNLINUXHVM: ami-cfe4b2b0
+      CENTOS7HVM: ami-9887c6e7
+      US1404HVM: ami-e6202f99
+      US1604HVM: ami-ef151d90
+    us-east-2:
+      AMZNLINUXHVM: ami-40142d25
+      CENTOS7HVM: ami-9c0638f9
+      US1404HVM: ami-2fc8f24a
+      US1604HVM: ami-dad5efbf
+    us-west-1:
+      AMZNLINUXHVM: ami-0e86606d
+      CENTOS7HVM: ami-4826c22b
+      US1404HVM: ami-47749924
+      US1604HVM: ami-d8b05cbb
+    us-west-2:
+      AMZNLINUXHVM: ami-0ad99772
+      CENTOS7HVM: ami-3ecc8f46
+      US1404HVM: ami-4218403a
+      US1604HVM: ami-1cc69e64
+  LinuxAMINameMap:
+    Amazon-Linux-HVM:
+      Code: AMZNLINUXHVM
+    CentOS-7-HVM:
+      Code: CENTOS7HVM
+    Ubuntu-Server-14.04-LTS-HVM:
+      Code: US1404HVM
+    Ubuntu-Server-16.04-LTS-HVM:
+      Code: US1604HVM
+Conditions:
+  UseOSImageOverride:
+    'Fn::Not':
+      - 'Fn::Equals':
+          - Ref: OSImageOverride
+          - ''
+Resources:
+  LaunchConfiguration:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Properties:
+      AssociatePublicIpAddress:    'false'
+      EbsOptimized:                'false'
+      IamInstanceProfile:          !Ref ec2iaminstanceprofile
+      InstanceMonitoring:          !Ref InstanceMonitoring
+      InstanceType:                !Ref ec2InstanceType
+      SecurityGroups:              !Ref SecurityGroup
+      ImageId:
+        'Fn::If':
+          - UseOSImageOverride
+          - Ref: OSImageOverride
+          - 'Fn::FindInMap':
+              - AWSAMIRegionMap
+              - Ref: 'AWS::Region'
+              - 'Fn::FindInMap':
+                  - LinuxAMINameMap
+                  - Ref: AMIImageId
+                  - Code
+      UserData:
+        Fn::Base64: !Sub |
+           #!/bin/bash
+           # Install Docker repo and docker-ce
+           yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+           yum clean all
+           yum repolist
+           rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/p/pigz-2.3.4-1.el7.x86_64.rpm
+           yum install -y docker-ce
+           service docker start
+           chkconfig docker on
+
+           # Set iptables rules
+           echo 'net.ipv4.conf.all.route_localnet = 1' >> /etc/sysctl.conf
+           sysctl -p /etc/sysctl.conf
+           iptables -t nat -A PREROUTING -p tcp -d 169.254.170.2 --dport 80 -j DNAT --to-destination 127.0.0.1:51679
+           iptables -t nat -A OUTPUT -d 169.254.170.2 -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 51679
+
+           # Write iptables rules to persist after reboot
+           iptables-save > /etc/sysconfig/iptables
+
+           # Create directories for ECS agent
+           mkdir -p /var/log/ecs /var/lib/ecs/data /etc/ecs
+
+           # Write ECS config file
+           cat << EOF > /etc/ecs/ecs.config
+           ECS_CLUSTER=${ClusterName}
+           ECS_DATADIR=/data
+           ECS_ENABLE_TASK_IAM_ROLE=true
+           ECS_ENABLE_TASK_IAM_ROLE_NETWORK_HOST=true
+           ECS_LOGFILE=/log/ecs-agent.log
+           ECS_AVAILABLE_LOGGING_DRIVERS=["json-file","awslogs"]
+           ECS_LOGLEVEL=info
+           EOF
+
+           # Write systemd unit file
+           cat << EOF > /etc/systemd/system/docker-container@ecs-agent.service
+           [Unit]
+           Description=Docker Container %I
+           Requires=docker.service
+           After=docker.service
+
+           [Service]
+           Restart=always
+           ExecStart=/usr/bin/docker run --name %i \
+           --privileged \
+           --restart=on-failure:10 \
+           --volume=/var/run:/var/run \
+           --volume=/var/log/ecs/:/log:Z \
+           --volume=/var/lib/ecs/data:/data:Z \
+           --volume=/etc/ecs:/etc/ecs \
+           --net=host \
+           --env-file=/etc/ecs/ecs.config \
+           amazon/amazon-ecs-agent:latest
+           ExecStop=/usr/bin/docker rm -f %i
+
+           [Install]
+           WantedBy=default.target
+           EOF
+
+           # Restart Docker service
+           service docker restart
+
+           systemctl enable docker-container@ecs-agent.service
+           systemctl start docker-container@ecs-agent.service
+Outputs:
+  LaunchConfiguration:
+    Value: !Ref LaunchConfiguration
+    Description: Launch Configuration

@@ -1,0 +1,527 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating ECS Cluster
+Parameters:
+Parameters:
+  Environment:
+    Description: The environment name to prefix or tag
+    Type: String
+    Default: sbx
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: Select a VPC that allows instances access to the Internet (default to SBX VPC).
+    Default: vpc-d90edba0
+  WebSubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two subnets in your selected VPC in the Web layer (default to SBX VPC).
+    Default: subnet-535e8a09,subnet-adb987c8,subnet-ded50bf2,subnet-eb4dc7a3
+  AppSubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two subnets in your selected VPC in the App layer (default to SBX VPC).
+    Default: subnet-cc5b8f96,subnet-acb987c9,subnet-51d00e7d,subnet-6e49c326
+  DataSubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two subnets in your selected VPC in the Data layer (default to SBX VPC).
+    Default: subnet-265a8e7c,subnet-e6b58b83,subnet-11d10f3d,subnet-654dc72d
+  ProjectName:
+    Type: String
+    Description: Name of the project this SecurityGroup belongs to.
+    Default: ESS
+  TemplateSubFolder:
+    Type: String
+    Description: Enter the folder name of the CF scripts in S3.
+    Default: ventera-ess/cf-scripts
+  WebDefaultEC2SecurityGroup:
+    Type: String
+    Description: Enter the default security group.
+    Default: sg-b42616ca
+  AppDataDefaultEC2SecurityGroup:
+    Type: String
+    Description: Enter the default security group. For Test = sg-965ef1e7 , DEV = sg-a34b78dd, SBX = sg-2525155b, IMPL = sg-039b5570 , PROD = sg-1aa36b69
+    Default: sg-2525155b
+  oAuthCreateALBTargetGroup1:
+      Description: Select yes or no for creating TargetGroup1.
+      Type: String
+      Default: yes
+  oAuthCreateALBTargetGroup2:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: no
+  oAuthCreateALBListenerRule1:
+      Description: Select yes or no for creating ListenerRule1.
+      Type: String
+  oAuthCreateALBListenerRule2:
+      Description: Select yes or no for creating ListenerRule2.
+      Type: String
+  oAuthCreateALBListenerRule1path:
+      Description: Create a ListenerRule path for the service eg:'/service*'.
+      Type: String
+  oAuthCreateALBListenerRule2path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+  oAuthALBTG1HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: '/'
+  oAuthALBTG2HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+  oAuthALBTargetGroupName1:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: sbx-oAuth-Services-http
+  oAuthALBTargetGroupName2:
+    Type: String
+    Description: Name of the TargetGroup.
+  oAuthALBTargetGroup1Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: 8280
+  oAuthALBTargetGroup2Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+  WSO2APICreateALBTargetGroup1:
+      Description: Select yes or no for creating TargetGroup1.
+      Type: String
+      Default: yes
+  WSO2APICreateALBTargetGroup2:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: no
+  WSO2APICreateALBListenerRule1:
+      Description: Select yes or no for creating ListenerRule1.
+      Type: String
+  WSO2APICreateALBListenerRule2:
+      Description: Select yes or no for creating ListenerRule2.
+      Type: String
+  WSO2APICreateALBListenerRule1path:
+      Description: Create a ListenerRule path for the service eg:'/service*'.
+      Type: String
+  WSO2APICreateALBListenerRule2path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+  WSO2APIALBTG1HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: '/'
+  WSO2APIALBTG2HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+  WSO2APIALBTargetGroupName1:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: sbx-WSO2API-Services-http
+  WSO2APIALBTargetGroupName2:
+    Type: String
+    Description: Name of the TargetGroup.
+  WSO2APIALBTargetGroup1Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: 8280
+  WSO2APIALBTargetGroup2Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+  WebAppCreateALBTargetGroup1:
+      Description: Select yes or no for creating TargetGroup1.
+      Type: String
+      Default: yes
+  WebAppCreateALBTargetGroup2:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: yes
+  WebAppCreateALBListenerRule1:
+      Description: Select yes or no for creating ListenerRule1.
+      Type: String
+      Default: yes
+  WebAppCreateALBListenerRule2:
+      Description: Select yes or no for creating ListenerRule2.
+      Type: String
+      Default: yes
+  WebAppCreateALBListenerRule1path:
+      Description: Create a ListenerRule path for the service eg:'/service*'.
+      Type: String
+      Default: '/verify*'
+  WebAppCreateALBListenerRule2path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+      Default: '/rolesManagement*'
+  WebAppALBTG1HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: '/verify/healthCheck'
+  WebAppALBTG2HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: '/rolesManagement/healthCheck'
+  WebAppALBTargetGroupName1:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: sbx-Verify-Services-http
+  WebAppALBTargetGroupName2:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: sbx-RolesMgmt-Services-http
+  WebAppALBTargetGroup1Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: 3000
+  WebAppALBTargetGroup2Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: 3000
+  WSO2EICreateALBTargetGroup1:
+      Description: Select yes or no for creating TargetGroup1.
+      Type: String
+      Default: yes
+  WSO2EICreateALBTargetGroup2:
+      Description: Select yes or no for creating TargetGroup2.
+      Type: String
+      Default: no
+  WSO2EICreateALBListenerRule1:
+      Description: Select yes or no for creating ListenerRule1.
+      Type: String
+      Default: yes
+  WSO2EICreateALBListenerRule2:
+      Description: Select yes or no for creating ListenerRule2.
+      Type: String
+      Default: no
+  WSO2EICreateALBListenerRule1path:
+      Description: Create a ListenerRule path for the service eg:'/service*'.
+      Type: String
+      Default: '/services*'
+  WSO2EICreateALBListenerRule2path:
+      Description: Create a ListenerRule path for the service. eg:'/service*'.
+      Type: String
+      Default: ''
+  WSO2EIALBTG1HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: '/services'
+  WSO2EIALBTG2HealthCheckPath:
+    Type: String
+    Description: The ping path destination where Elastic Load Balancing sends health check requests.
+    Default: ''
+  WSO2EIALBTargetGroupName1:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: sbx-WSO2EI-Services-http
+  WSO2EIALBTargetGroupName2:
+    Type: String
+    Description: Name of the TargetGroup.
+    Default: ''
+  WSO2EIALBTargetGroup1Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: 8280
+  WSO2EIALBTargetGroup2Port:
+    Type: String
+    Description: Port the LoadBalancer uses when routing traffic to targets in this targetgroups (1-65535).
+    Default: ''
+Resources:
+  WebALB:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /application-load-balancer.yaml
+      Parameters:
+          Name: !Sub
+            - ${StackName}-WebALB
+            - StackName: !Ref AWS::StackName
+          LoadBalancerType:              network
+          CreateNetworkLoadBalancer:     yes
+          Scheme:                        internal
+          NLBProtocol:                   TCP
+          HealthCheckProtocol:           HTTP
+          ProjectName:                   !Ref ProjectName
+          NLBTargetGroupName:            WebAlbTG-sbx
+          VpcId:                         !Ref VpcId
+          SecurityGroupType:             webalbsg
+          SecurityGroup:                 !GetAtt oAuthSG.Outputs.ESSSecurityGroup
+          LoadBalancerName:              nginx
+          SubnetId:
+              'Fn::Join':
+                - ','
+                - Ref: WebSubnetId
+
+  oAuthSG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /security-group.yaml
+      Parameters:
+        Name: !Sub
+            - ${StackName}-oAuthSG
+            - StackName: !Ref AWS::StackName
+        ProjectName:                !Ref ProjectName
+        SecurityGroupType:          albsg
+        VpcId:                      !Ref VpcId
+        IpProtocol:                 tcp
+        ALBInboundFromPort:         80
+        ALBInboundToPort:           80
+        DefaultEC2SecurityGroup:    !Ref WebDefaultEC2SecurityGroup
+        ALBDockerInboundFromPort:   31000
+        ALBDockerInboundToPort:     61000
+
+  oAuthALB:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /application-load-balancer.yaml
+      Parameters:
+          Name: !Sub
+            - ${StackName}-oAuthALB
+            - StackName: !Ref AWS::StackName
+          CreateApplicationLoadBalancer: yes
+          LoadBalancerType:             application
+          Scheme:                       internal
+          ALBProtocol:                  HTTP
+          ProjectName:                  !Ref ProjectName
+          SecurityGroup:                !GetAtt oAuthSG.Outputs.ESSSecurityGroup
+          VpcId:                        !Ref VpcId
+          SecurityGroupType:            albsg
+          CreateALBTargetGroup1:        !Ref oAuthCreateALBTargetGroup1
+          CreateALBTargetGroup2:        !Ref oAuthCreateALBTargetGroup2
+          CreateALBTargetGroup3:        no
+          CreateALBListenerRule1:       !Ref oAuthCreateALBListenerRule1
+          CreateALBListenerRule2:       !Ref oAuthCreateALBListenerRule2
+          CreateALBListenerRule1path:   !Ref oAuthCreateALBListenerRule1path
+          CreateALBListenerRule2path:   !Ref oAuthCreateALBListenerRule2path
+          ALBTG1HealthCheckPath:        !Ref oAuthALBTG1HealthCheckPath
+          ALBTG2HealthCheckPath:        !Ref oAuthALBTG2HealthCheckPath
+          ALBTargetGroupName1:          !Ref oAuthALBTargetGroupName1
+          ALBTargetGroupName2:          !Ref oAuthALBTargetGroupName2
+          ALBTargetGroup1Port:          !Ref oAuthALBTargetGroup1Port
+          ALBTargetGroup2Port:          !Ref oAuthALBTargetGroup2Port
+          HealthCheckProtocol:          HTTP
+          HealthCheckPort:              traffic-port
+          HealthyThresholdCount:        2
+          UnhealthyThresholdCount:      3
+          HealthCheckTimeoutSeconds:    60
+          HealthCheckIntervalSeconds:   180
+          Matcher:                      200
+          LoadBalancerName:             oauth
+          SubnetId:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  WSO2APISG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /security-group.yaml
+      Parameters:
+        Name: !Sub
+            - ${StackName}-WSO2APISG
+            - StackName: !Ref AWS::StackName
+        ProjectName:                !Ref ProjectName
+        SecurityGroupType:          albsg
+        VpcId:                      !Ref VpcId
+        IpProtocol:                 tcp
+        ALBInboundFromPort:         80
+        ALBInboundToPort:           80
+        DefaultEC2SecurityGroup:    !Ref WebDefaultEC2SecurityGroup
+        ALBDockerInboundFromPort:   31000
+        ALBDockerInboundToPort:     61000
+
+  WSO2APIALB:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /application-load-balancer.yaml
+      Parameters:
+          Name: !Sub
+            - ${StackName}-WSO2APIALB
+            - StackName: !Ref AWS::StackName
+          CreateApplicationLoadBalancer: yes
+          LoadBalancerType:             application
+          Scheme:                       internal
+          ALBProtocol:                  HTTP
+          ProjectName:                  !Ref ProjectName
+          SecurityGroup:                !GetAtt WSO2APISG.Outputs.ESSSecurityGroup
+          VpcId:                        !Ref VpcId
+          SecurityGroupType:            albsg
+          CreateALBTargetGroup1:        !Ref WSO2APICreateALBTargetGroup1
+          CreateALBTargetGroup2:        !Ref WSO2APICreateALBTargetGroup2
+          CreateALBTargetGroup3:        no
+          CreateALBListenerRule1:       !Ref WSO2APICreateALBListenerRule1
+          CreateALBListenerRule2:       !Ref WSO2APICreateALBListenerRule2
+          CreateALBListenerRule1path:   !Ref WSO2APICreateALBListenerRule1path
+          CreateALBListenerRule2path:   !Ref WSO2APICreateALBListenerRule2path
+          ALBTG1HealthCheckPath:        !Ref WSO2APIALBTG1HealthCheckPath
+          ALBTG2HealthCheckPath:        !Ref WSO2APIALBTG2HealthCheckPath
+          ALBTargetGroupName1:          !Ref WSO2APIALBTargetGroupName1
+          ALBTargetGroupName2:          !Ref WSO2APIALBTargetGroupName2
+          ALBTargetGroup1Port:          !Ref WSO2APIALBTargetGroup1Port
+          ALBTargetGroup2Port:          !Ref WSO2APIALBTargetGroup2Port
+          HealthCheckProtocol:          HTTP
+          HealthCheckPort:              traffic-port
+          HealthyThresholdCount:        2
+          UnhealthyThresholdCount:      3
+          HealthCheckTimeoutSeconds:    60
+          HealthCheckIntervalSeconds:   180
+          Matcher:                      200
+          LoadBalancerName:             wso2api
+          SubnetId:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  WebAppSG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /security-group.yaml
+      Parameters:
+        Name: !Sub
+            - ${StackName}-WebAppSG
+            - StackName: !Ref AWS::StackName
+        ProjectName:                !Ref ProjectName
+        SecurityGroupType:          albsg
+        VpcId:                      !Ref VpcId
+        IpProtocol:                 tcp
+        ALBInboundFromPort:         80
+        ALBInboundToPort:           80
+        DefaultEC2SecurityGroup:    !Ref AppDataDefaultEC2SecurityGroup
+        ALBDockerInboundFromPort:   31000
+        ALBDockerInboundToPort:     61000
+
+  WebAppALB:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /application-load-balancer.yaml
+      Parameters:
+          Name: !Sub
+            - ${StackName}-WebAppALB
+            - StackName: !Ref AWS::StackName
+          CreateApplicationLoadBalancer: yes
+          LoadBalancerType:             application
+          Scheme:                       internal
+          ALBProtocol:                  HTTP
+          ProjectName:                  !Ref ProjectName
+          SecurityGroup:                !GetAtt WebAppSG.Outputs.ESSSecurityGroup
+          VpcId:                        !Ref VpcId
+          SecurityGroupType:            albsg
+          CreateALBTargetGroup1:        !Ref WebAppCreateALBTargetGroup1
+          CreateALBTargetGroup2:        !Ref WebAppCreateALBTargetGroup2
+          CreateALBTargetGroup3:        no
+          CreateALBListenerRule1:       !Ref WebAppCreateALBListenerRule1
+          CreateALBListenerRule2:       !Ref WebAppCreateALBListenerRule2
+          CreateALBListenerRule1path:   !Ref WebAppCreateALBListenerRule1path
+          CreateALBListenerRule2path:   !Ref WebAppCreateALBListenerRule2path
+          ALBTG1HealthCheckPath:        !Ref WebAppALBTG1HealthCheckPath
+          ALBTG2HealthCheckPath:        !Ref WebAppALBTG2HealthCheckPath
+          ALBTargetGroupName1:          !Ref WebAppALBTargetGroupName1
+          ALBTargetGroupName2:          !Ref WebAppALBTargetGroupName2
+          ALBTargetGroup1Port:          !Ref WebAppALBTargetGroup1Port
+          ALBTargetGroup2Port:          !Ref WebAppALBTargetGroup2Port
+          HealthCheckProtocol:          HTTP
+          HealthCheckPort:              traffic-port
+          HealthyThresholdCount:        2
+          UnhealthyThresholdCount:      3
+          HealthCheckTimeoutSeconds:    60
+          HealthCheckIntervalSeconds:   180
+          Matcher:                      200
+          LoadBalancerName:             webapp
+          SubnetId:
+              'Fn::Join':
+                - ','
+                - Ref: AppSubnetId
+
+  WSO2EISG:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /security-group.yaml
+      Parameters:
+        Name: !Sub
+            - ${StackName}-WSO2EISG
+            - StackName: !Ref AWS::StackName
+        ProjectName:                !Ref ProjectName
+        SecurityGroupType:          albsg
+        VpcId:                      !Ref VpcId
+        IpProtocol:                 tcp
+        ALBInboundFromPort:         80
+        ALBInboundToPort:           80
+        DefaultEC2SecurityGroup:    !Ref AppDataDefaultEC2SecurityGroup
+        ALBDockerInboundFromPort:   31000
+        ALBDockerInboundToPort:     61000
+
+  WSO2EIALB:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL:
+        'Fn::Join':
+          - ''
+          - - 'https://s3.amazonaws.com/'
+            - Ref: TemplateSubFolder
+            - /application-load-balancer.yaml
+      Parameters:
+          Name: !Sub
+            - ${StackName}-WSO2EIALB
+            - StackName: !Ref AWS::StackName
+          CreateApplicationLoadBalancer: yes
+          LoadBalancerType:             application
+          Scheme:                       internal
+          ALBProtocol:                  HTTP
+          ProjectName:                  !Ref ProjectName
+          SecurityGroup:                !GetAtt WSO2EISG.Outputs.ESSSecurityGroup
+          VpcId:                        !Ref VpcId
+          SecurityGroupType:            albsg
+          CreateALBTargetGroup1:        !Ref WSO2EICreateALBTargetGroup1
+          CreateALBTargetGroup2:        !Ref WSO2EICreateALBTargetGroup2
+          CreateALBTargetGroup3:        no
+          CreateALBListenerRule1:       !Ref WSO2EICreateALBListenerRule1
+          CreateALBListenerRule2:       !Ref WSO2EICreateALBListenerRule2
+          CreateALBListenerRule1path:   !Ref WSO2EICreateALBListenerRule1path
+          CreateALBListenerRule2path:   !Ref WSO2EICreateALBListenerRule2path
+          ALBTG1HealthCheckPath:        !Ref WSO2EIALBTG1HealthCheckPath
+          ALBTG2HealthCheckPath:        !Ref WSO2EIALBTG2HealthCheckPath
+          ALBTargetGroupName1:          !Ref WSO2EIALBTargetGroupName1
+          ALBTargetGroupName2:          !Ref WSO2EIALBTargetGroupName2
+          ALBTargetGroup1Port:          !Ref WSO2EIALBTargetGroup1Port
+          ALBTargetGroup2Port:          !Ref WSO2EIALBTargetGroup2Port
+          HealthCheckProtocol:          HTTP
+          HealthCheckPort:              traffic-port
+          HealthyThresholdCount:        2
+          UnhealthyThresholdCount:      5
+          HealthCheckTimeoutSeconds:    60
+          HealthCheckIntervalSeconds:   300
+          Matcher:                      200
+          LoadBalancerName:             wso2ei
+          SubnetId:
+              'Fn::Join':
+                - ','
+                - Ref: DataSubnetId

@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating Auto Scaling Group
+Parameters:
+  Cooldown:
+    Type: String
+    Default: 60
+    Description: Enter Cooldown interval
+  ScalingUpAdjustment:
+    Type: String
+    Default: '1'
+    Description: Enter number of instances to scale up
+  ScalingDownAdjustment:
+    Type: String
+    Default: '-1'
+    Description: Enter number of instances to scale down
+  CPUHighEvaluationPeriods:
+    Type: String
+    Default: '2'
+    Description: Enter the EvaluationPeriods for CPU high
+  CPULowEvaluationPeriods:
+    Type: String
+    Default: '2'
+    Description: Enter the EvaluationPeriods for CPU low
+  CPUHighThreshold:
+    Type: String
+    Default: '75'
+    Description: Enter the Threshold value for CPU High
+  CPULowThreshold:
+    Type: String
+    Default: '20'
+    Description: Enter the Threshold value for CPU Low
+  AutoScalingGroupName:
+    Type: String
+    Description: Enter the name of the autoscaling group to attach to.
+Resources:
+  ClusterScaleUpPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        Ref: AutoScalingGroupName
+      Cooldown: !Ref Cooldown
+      ScalingAdjustment: !Ref ScalingUpAdjustment
+  ClusterScaleDownPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName:
+        Ref: AutoScalingGroupName
+      Cooldown: !Ref Cooldown
+      ScalingAdjustment: !Ref ScalingDownAdjustment
+  CPUAlarmHigh:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Scale-up if CPU > 75% for 2 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: '60'
+      EvaluationPeriods: !Ref CPUHighEvaluationPeriods
+      Threshold: !Ref CPUHighThreshold
+      AlarmActions:
+        - Ref: ClusterScaleUpPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value:
+            Ref: AutoScalingGroupName
+      ComparisonOperator: GreaterThanThreshold
+  CPUAlarmLow:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties:
+      AlarmDescription: Scale-down if CPU < 20% for 2 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Maximum
+      Period: '60'
+      EvaluationPeriods: !Ref CPULowEvaluationPeriods
+      Threshold: !Ref CPULowThreshold
+      AlarmActions:
+        - Ref: ClusterScaleDownPolicy
+      Dimensions:
+        - Name: AutoScalingGroupName
+          Value:
+            Ref: AutoScalingGroupName
+      ComparisonOperator: LessThanThreshold

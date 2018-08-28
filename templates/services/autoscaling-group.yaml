@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template for creating Auto Scaling Group
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: AutoScaling Group Configuration
+        Parameters:
+          - ProjectName
+          - ClusterName
+          - Subnets
+          - LaunchConfigurationName
+          - Cooldown
+          - DesiredCapacity
+          - MinSize
+          - MaxSize
+          - HealthCheckGracePeriod
+          - HealthCheckType
+
+    ParameterLabels:
+      ProjectName:
+        default: Anchel
+      ClusterName:
+        default: ECS Cluster Name
+      Subnets:
+        default: Select min two subnets
+      LaunchConfigurationName:
+        default: Launch Configuration Name
+      Cooldown:
+        default: AutoScaling Group Cooldown
+      DesiredCapacity:
+        default: Desired Capacity
+      MinSize:
+        default: Minimum Size
+      MaxSize:
+        default: Maximum Size
+      HealthCheckGracePeriod:
+        default: HealthCheck Grace Period
+      HealthCheckType:
+        default: HealthCheck Type
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: Name of the project this Autoscaling Group belongs to.
+    Default: Anchel
+  ClusterName:
+    Description: The ECS Cluster Name
+    Type: String
+  Subnets:
+    Description: List of subnets for the ECS Instances
+    Type: 'List<AWS::EC2::Subnet::Id>'
+  LaunchConfigurationName:
+    Type: String
+    Description: Enter LaunchConfiguration Name
+  Cooldown:
+    Type: String
+    Default: 30
+    Description: The number of seconds after a scaling activity is completed before any further scaling activities can start.
+  DesiredCapacity:
+    Type: String
+    Default: 2
+    Description: Specifies the desired capacity for the Auto Scaling group.
+  MinSize:
+    Type: String
+    Default: 2
+    Description: The minimum size of the Auto Scaling group.
+  MaxSize:
+    Type: String
+    Default: 3
+    Description: The maximum size of the Auto Scaling group.
+  HealthCheckGracePeriod:
+    Type: String
+    Default: 50
+    Description: The length of time in seconds after a new EC2 instance comes into service that Auto Scaling starts checking its health.
+  HealthCheckType:
+    Type: String
+    Default: EC2
+    Description: The service you want the health status from, Amazon EC2 or Elastic Load Balancer. Valid values are EC2 or ELB.
+
+Resources:
+  AutoScalingGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      Cooldown:                !Ref Cooldown
+      DesiredCapacity:         !Ref DesiredCapacity
+      MinSize:                 !Ref MinSize
+      MaxSize:                 !Ref MaxSize
+      HealthCheckGracePeriod:  !Ref HealthCheckGracePeriod
+      HealthCheckType:         !Ref HealthCheckType
+      LaunchConfigurationName: !Ref LaunchConfigurationName
+      MetricsCollection:
+        - Granularity: 1Minute
+      VPCZoneIdentifier:       !Ref Subnets
+      Tags:
+        - PropagateAtLaunch: 'true'
+          Key: Name
+          Value:
+            'Fn::Join':
+              - '-'
+              - - Ref: ClusterName
+                - Node
+        - PropagateAtLaunch: 'true'
+          Key: ECS_Cluster
+          Value: !Ref ClusterName
+        - Key: ProjectName
+          Value: !Ref ProjectName
+Outputs:
+  AutoScalingGroup:
+    Value: !Ref AutoScalingGroup
+    Description: Autoscaling Group
